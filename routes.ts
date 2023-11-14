@@ -7,8 +7,21 @@ import { assistant } from './src/assistant';
 import { APIPromise } from 'openai/core';
 import { Run } from 'openai/resources/beta/threads/runs/runs';
 
+import { config as configDotenv } from 'dotenv';
+import {createMessageController, createRunController, createThreadController, listMessagesController, retrieveRunController} from "./src/controller"
+configDotenv()
 
 const router = Router();
+//Runs
+router.post('/assistant/run/:threadId', createRunController);
+router.get('/assistant/run/:threadId/:runId', retrieveRunController);
+
+//Threads
+router.post('/assistant/thread', createThreadController)
+
+//Messages
+router.post('/assistant/message/:threadId', createMessageController)
+router.get('/assistant/message/:threadId', listMessagesController);
 
 router.post('/assistant/thread', async (req: Request, res: Response) => {
     const body: IAssistantThread = req.body;
@@ -24,9 +37,7 @@ router.post('/assistant/thread', async (req: Request, res: Response) => {
         body as MessageCreateParams
     );
 
-    const createdRun = await openai.beta.threads.runs.create(thread.id, {
-        assistant_id: "asst_T2bCsger6jxC0skrlHokwB4I"
-    });
+ 
 
     let run = await openai.beta.threads.runs.retrieve(thread.id, createdRun.id);
 
@@ -34,7 +45,7 @@ router.post('/assistant/thread', async (req: Request, res: Response) => {
         await new Promise(resolve => setTimeout(resolve, 1000)); // Attendre 1 seconde
         run = await openai.beta.threads.runs.retrieve(thread.id, createdRun.id);
     }
-    
+
     if (run.status === "completed") {
         console.log("Request successfull")
     }
@@ -50,37 +61,44 @@ router.post('/assistant/thread', async (req: Request, res: Response) => {
     const messages = await openai.beta.threads.messages.list(thread.id);
     console.log(messages.data);
     // console.log(thread);
-    
-    
+
+
     res.status(200).send(messages.data);
 });
 
-router.post("/assistant/thread/:threadId",async (req, res) => {
+router.post("/assistant/thread/:threadId", async (req, res) => {
     console.log("call")
-    const {threadId} = req.params;
-    const {runId} = req.body
+    const { threadId } = req.params;
+    const { content, role } = req.body
     console.log(threadId)
+
+    await openai.beta.threads.messages.create(
+        threadId,
+        { role: role, content: content } as MessageCreateParams
+    );
     const createdRun = await openai.beta.threads.runs.create(threadId, {
         assistant_id: "asst_T2bCsger6jxC0skrlHokwB4I"
     });
     let run = await openai.beta.threads.runs.retrieve(threadId, createdRun.id);
+    
 
     while (run.status !== "completed" && run.status !== "failed" && run.status !== "expired") {
         await new Promise(resolve => setTimeout(resolve, 1000)); // Attendre 1 seconde
         run = await openai.beta.threads.runs.retrieve(threadId, createdRun.id);
         console.log("status: " + run.status);
-        
+        console.log("action: " + run.required_action)
+
     }
 
-    
 
-  
+
+
 
     const messages = await openai.beta.threads.messages.list(threadId);
     console.log(messages.data);
     // console.log(thread);
-    
-    
+
+
     res.status(200).send(messages.data);
 })
 

@@ -1,8 +1,9 @@
 import OpenAI from "openai";
 import { Assistant } from "openai/resources/beta/assistants/assistants";
-import { config as configDotenv } from 'dotenv';
+
 import openai from "./openAIInstance";
 import fs from 'fs';
+import { config as configDotenv } from 'dotenv';
 configDotenv()
 
 
@@ -22,4 +23,14 @@ export let assistant: Assistant;
     //     file_ids: [products.id]
     // });
     // console.log(`Assistant created with ID: ${assistant.id}`);
+    try {
+        assistant = await openai.beta.assistants.retrieve("asst_T2bCsger6jxC0skrlHokwB4I")
+        if (assistant.id) {
+        console.log("Assistant with id " + assistant.id + " retrieved")
+        }
+    } catch (error) {
+        console.log("Unable to retrieve assistant: " + error)
+    }
+
+    
 })();

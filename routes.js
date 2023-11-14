@@ -6,7 +6,18 @@ Object.defineProperty(exports, "__esModule", { value: true });
 // routes.ts
 const express_1 = require("express");
 const openAIInstance_1 = __importDefault(require("./src/openAIInstance"));
+const dotenv_1 = require("dotenv");
+const controller_1 = require("./src/controller");
+(0, dotenv_1.config)();
 const router = (0, express_1.Router)();
+//Runs
+router.post('/assistant/run/:threadId', controller_1.createRunController);
+router.get('/assistant/run/:threadId/:runId', controller_1.retrieveRunController);
+//Threads
+router.post('/assistant/thread', controller_1.createThreadController);
+//Messages
+router.post('/assistant/message/:threadId', controller_1.createMessageController);
+router.get('/assistant/message/:threadId', controller_1.listMessagesController);
 router.post('/assistant/thread', async (req, res) => {
     const body = req.body;
     if (!body.role || !body.content) {
@@ -15,9 +26,6 @@ router.post('/assistant/thread', async (req, res) => {
     }
     const thread = await openAIInstance_1.default.beta.threads.create({});
     const message = await openAIInstance_1.default.beta.threads.messages.create(thread.id, body);
-    const createdRun = await openAIInstance_1.default.beta.threads.runs.create(thread.id, {
-        assistant_id: "asst_T2bCsger6jxC0skrlHokwB4I"
-    });
     let run = await openAIInstance_1.default.beta.threads.runs.retrieve(thread.id, createdRun.id);
     while (run.status !== "completed" && run.status !== "failed" && run.status !== "expired") {
         await new Promise(resolve => setTimeout(resolve, 1000)); // Attendre 1 seconde
@@ -40,8 +48,9 @@ router.post('/assistant/thread', async (req, res) => {
 router.post("/assistant/thread/:threadId", async (req, res) => {
     console.log("call");
     const { threadId } = req.params;
-    const { runId } = req.body;
+    const { content, role } = req.body;
     console.log(threadId);
+    await openAIInstance_1.default.beta.threads.messages.create(threadId, { role: role, content: content });
     const createdRun = await openAIInstance_1.default.beta.threads.runs.create(threadId, {
         assistant_id: "asst_T2bCsger6jxC0skrlHokwB4I"
     });
@@ -49,7 +58,8 @@ router.post("/assistant/thread/:threadId", async (req, res) => {
     while (run.status !== "completed" && run.status !== "failed" && run.status !== "expired") {
         await new Promise(resolve => setTimeout(resolve, 1000)); // Attendre 1 seconde
         run = await openAIInstance_1.default.beta.threads.runs.retrieve(threadId, createdRun.id);
-        console.log("status" + run.status);
+        console.log("status: " + run.status);
+        console.log("action: " + run.required_action);
     }
     const messages = await openAIInstance_1.default.beta.threads.messages.list(threadId);
     console.log(messages.data);
